@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中華職棒 2025 數據統計</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.bootstrap5.min.css" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b3e;
+    --accent: #c8102e;
+    --bg: #f0f2f5;
+  }
+  body { background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* Header */
+  .site-header {
+    background: linear-gradient(135deg, #0d1b3e 0%, #1a3a6b 100%);
+    padding: 16px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .site-header h1 { color: #fff; font-size: 1.6rem; font-weight: 700; margin: 0; }
+  .site-header .sub { color: #a0b4d0; font-size: .85rem; }
+
+  /* Tabs */
+  .nav-tabs { border-bottom: 2px solid #dee2e6; }
+  .nav-tabs .nav-link { color: #555; font-weight: 600; border: none; border-bottom: 3px solid transparent; padding: 10px 20px; }
+  .nav-tabs .nav-link.active { color: var(--navy); border-bottom: 3px solid var(--accent); background: transparent; }
+  .nav-tabs .nav-link:hover { color: var(--navy); }
+
+  /* Cards */
+  .card { border: none; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+  .card-header { background: #fff; border-bottom: 1px solid #eee; border-radius: 10px 10px 0 0 !important; font-weight: 700; color: var(--navy); }
+
+  /* Standings */
+  .standings-table th { background: var(--navy) !important; color: #fff; text-align: center; }
+  .standings-table td { text-align: center; vertical-align: middle; }
+  .standings-table .rank-1 td:first-child { font-weight: 700; color: var(--accent); }
+  .team-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: .82rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* DataTable */
+  table.dataTable thead th { background: #1a3a6b; color: #fff; white-space: nowrap; }
+  table.dataTable tbody tr:hover td { background: #e8f0fe; }
+  .dataTables_wrapper .dataTables_length select,
+  .dataTables_wrapper .dataTables_filter input { border: 1px solid #ccc; border-radius: 6px; padding: 4px 8px; }
+
+  /* Filter bar */
+  .filter-bar { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+  .filter-bar label { font-size: .82rem; font-weight: 600; color: #555; margin-bottom: 3px; }
+
+  /* Stat highlight */
+  .stat-hero { background: linear-gradient(135deg, #0d1b3e, #1a3a6b); color: #fff; border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-hero .num { font-size: 2rem; font-weight: 800; }
+  .stat-hero .lbl { font-size: .78rem; opacity: .8; }
+
+  /* Score badge */
+  .score-cell { font-weight: 700; font-size: 1.05rem; white-space: nowrap; }
+  .score-win { color: #c8102e; }
+  .score-loss { color: #888; }
+
+  /* Team chip */
+  .chip { display:inline-block; padding:1px 8px; border-radius:12px; font-size:.75rem; font-weight:700; color:#fff; white-space:nowrap; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .site-header h1 { font-size: 1.2rem; }
+    .stat-hero .num { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="site-header">
+  <div class="container-fluid px-4">
+    <div class="d-flex align-items-center gap-3">
+      <span style="font-size:2.2rem">⚾</span>
+      <div>
+        <h1>中華職棒大聯盟 2025 數據統計</h1>
+        <div class="sub">CPBL 2025 Season Statistics</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container-fluid px-3 py-3">
+
+  <!-- Summary cards -->
+  <div class="row g-3 mb-3" id="summary-row">
+    <div class="col-6 col-md-3">
+      <div class="stat-hero">
+        <div class="num" id="sum-games">—</div>
+        <div class="lbl">場比賽</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-hero">
+        <div class="num" id="sum-batters">—</div>
+        <div class="lbl">位打者</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-hero">
+        <div class="num" id="sum-pitchers">—</div>
+        <div class="lbl">位投手</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-hero">
+        <div class="num" id="sum-hr">—</div>
+        <div class="lbl">全壘打</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-standings">🏆 球隊戰績</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-batting" id="btn-batting">🏏 打者成績</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-pitching" id="btn-pitching">⚾ 投手成績</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-games" id="btn-games">📋 比賽紀錄</button></li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- TAB 1: STANDINGS                        -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="tab-pane fade show active" id="tab-standings">
+      <div class="row g-3">
+        <div class="col-12 col-lg-7">
+          <div class="card">
+            <div class="card-header py-2">本季戰績排名</div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0 standings-table">
+                  <thead>
+                    <tr>
+                      <th>排名</th><th>球隊</th><th>出賽</th>
+                      <th>勝</th><th>敗</th><th>和</th>
+                      <th>勝率</th><th>差距</th>
+                    </tr>
+                  </thead>
+                  <tbody id="standings-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-5">
+          <div class="card h-100">
+            <div class="card-header py-2">各隊勝敗視覺化</div>
+            <div class="card-body">
+              <div id="wl-bars"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- TAB 2: BATTING                          -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-batting">
+      <div class="filter-bar mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-2">
+            <label>球隊</label>
+            <select id="bat-team" class="form-select form-select-sm">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label>對手</label>
+            <select id="bat-opp" class="form-select form-select-sm">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label>開始日期</label>
+            <input type="date" id="bat-from" class="form-control form-control-sm" value="2025-03-01">
+          </div>
+          <div class="col-6 col-md-2">
+            <label>結束日期</label>
+            <input type="date" id="bat-to" class="form-control form-control-sm" value="2025-10-31">
+          </div>
+          <div class="col-6 col-md-2">
+            <label>最少打席</label>
+            <input type="number" id="bat-min-pa" class="form-control form-control-sm" value="1" min="1">
+          </div>
+          <div class="col-6 col-md-2">
+            <button class="btn btn-primary btn-sm w-100" onclick="loadBatting()">🔍 查詢</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body p-2">
+          <div class="table-responsive">
+            <table id="batting-table" class="table table-sm table-striped" style="width:100%">
+              <thead>
+                <tr>
+                  <th>球員</th><th>球隊</th>
+                  <th title="出賽">G</th>
+                  <th title="打席">PA</th>
+                  <th title="打數">AB</th>
+                  <th title="安打">H</th>
+                  <th title="二壘打">2B</th>
+                  <th title="三壘打">3B</th>
+                  <th title="全壘打">HR</th>
+                  <th title="打點">RBI</th>
+                  <th title="得分">R</th>
+                  <th title="四壞球">BB</th>
+                  <th title="三振">K</th>
+                  <th title="盜壘">SB</th>
+                  <th title="打擊率">AVG</th>
+                  <th title="上壘率">OBP</th>
+                  <th title="長打率">SLG</th>
+                  <th title="整體攻擊指數">OPS</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- TAB 3: PITCHING                         -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-pitching">
+      <div class="filter-bar mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-2">
+            <label>球隊</label>
+            <select id="pit-team" class="form-select form-select-sm">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label>對手</label>
+            <select id="pit-opp" class="form-select form-select-sm">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label>開始日期</label>
+            <input type="date" id="pit-from" class="form-control form-control-sm" value="2025-03-01">
+          </div>
+          <div class="col-6 col-md-2">
+            <label>結束日期</label>
+            <input type="date" id="pit-to" class="form-control form-control-sm" value="2025-10-31">
+          </div>
+          <div class="col-6 col-md-2">
+            <label>最少局數</label>
+            <input type="number" id="pit-min-ip" class="form-control form-control-sm" value="1" min="0" step="0.1">
+          </div>
+          <div class="col-6 col-md-2">
+            <button class="btn btn-primary btn-sm w-100" onclick="loadPitching()">🔍 查詢</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body p-2">
+          <div class="table-responsive">
+            <table id="pitching-table" class="table table-sm table-striped" style="width:100%">
+              <thead>
+                <tr>
+                  <th>球員</th><th>球隊</th>
+                  <th title="出賽">G</th>
+                  <th title="勝">W</th>
+                  <th title="敗">L</th>
+                  <th title="救援">S</th>
+                  <th title="中繼">HLD</th>
+                  <th title="投球局數">IP</th>
+                  <th title="面對打者">BF</th>
+                  <th title="被安打">H</th>
+                  <th title="被全壘打">HR</th>
+                  <th title="保送">BB</th>
+                  <th title="三振">K</th>
+                  <th title="失分">R</th>
+                  <th title="自責分">ER</th>
+                  <th title="投球數">P</th>
+                  <th title="防禦率">ERA</th>
+                  <th title="每局被上壘率">WHIP</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- TAB 4: GAMES                            -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-games">
+      <div class="filter-bar mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-2">
+            <label>球隊</label>
+            <select id="gm-team" class="form-select form-select-sm">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label>對手</label>
+            <select id="gm-opp" class="form-select form-select-sm">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label>開始日期</label>
+            <input type="date" id="gm-from" class="form-control form-control-sm" value="2025-03-01">
+          </div>
+          <div class="col-6 col-md-2">
+            <label>結束日期</label>
+            <input type="date" id="gm-to" class="form-control form-control-sm" value="2025-10-31">
+          </div>
+          <div class="col-6 col-md-2">
+            <button class="btn btn-primary btn-sm w-100" onclick="loadGames()">🔍 查詢</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body p-2">
+          <div class="table-responsive">
+            <table id="games-table" class="table table-sm table-striped" style="width:100%">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>客隊</th>
+                  <th class="text-center">比分</th>
+                  <th>主隊</th>
+                  <th>球場</th>
+                  <th>時間</th>
+                  <th>勝投</th>
+                  <th>敗投</th>
+                  <th>救援</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- tab-content -->
+</div><!-- container -->
+
+<footer class="text-center text-muted py-3" style="font-size:.8rem;">
+  資料來源：中華職棒大聯盟官方網站 cpbl.com.tw &nbsp;|&nbsp; 2025 例行賽
+</footer>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+// ─────────────────────────────────────────────
+// Team color map
+// ─────────────────────────────────────────────
+const TEAM_COLORS = {
+  '中信兄弟':      '#005BAC',
+  '統一7-ELEVEn獅':'#FF6B00',
+  '樂天桃猿':      '#CC0000',
+  '富邦悍將':      '#6B2D8B',
+  '味全龍':        '#007A3D',
+  '台鋼雄鷹':      '#B8860B',
+};
+function teamChip(name) {
+  const c = TEAM_COLORS[name] || '#555';
+  return `<span class="chip" style="background:${c}">${name}</span>`;
+}
+function teamColor(name) {
+  return TEAM_COLORS[name] || '#555';
+}
+function fmtRate(v) {
+  if (v === null || v === undefined) return '.000';
+  const n = parseFloat(v);
+  if (isNaN(n)) return '.000';
+  return n.toFixed(3).replace(/^0/, '');
+}
+function fmtEra(v) {
+  const n = parseFloat(v);
+  return isNaN(n) ? '0.00' : n.toFixed(2);
+}
+
+let batDT, pitDT, gmDT;
+let allTeams = [];
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+$(function() {
+  // Load meta (teams list)
+  fetch('/api/meta').then(r=>r.json()).then(data => {
+    allTeams = data.teams;
+    populateSelects();
+    loadStandings();
+    loadBatting();
+  });
+
+  // Lazy-load other tabs on first click
+  $('#btn-pitching').on('click', function() {
+    if (!pitDT) loadPitching();
+  });
+  $('#btn-games').on('click', function() {
+    if (!gmDT) loadGames();
+  });
+});
+
+function populateSelects() {
+  const opts = allTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+  ['bat-team','bat-opp','pit-team','pit-opp','gm-team','gm-opp'].forEach(id => {
+    document.getElementById(id).insertAdjacentHTML('beforeend', opts);
+  });
+}
+
+// ─────────────────────────────────────────────
+// Standings
+// ─────────────────────────────────────────────
+function loadStandings() {
+  fetch('/api/standings').then(r=>r.json()).then(data => {
+    // Update summary
+    const totalG = data.reduce((s,r)=>s+r.G, 0) / 2;
+    document.getElementById('sum-games').textContent = Math.round(totalG);
+
+    // Build table
+    const tbody = document.getElementById('standings-body');
+    tbody.innerHTML = data.map(r => {
+      const cls = r.Rank === 1 ? 'rank-1' : '';
+      const medal = r.Rank === 1 ? '🥇' : r.Rank === 2 ? '🥈' : r.Rank === 3 ? '🥉' : r.Rank;
+      return `<tr class="${cls}">
+        <td>${medal}</td>
+        <td style="text-align:left">${teamChip(r.team)}</td>
+        <td>${r.G}</td>
+        <td><b>${r.W}</b></td>
+        <td>${r.L}</td>
+        <td>${r.T}</td>
+        <td><b>${parseFloat(r.WP).toFixed(3).replace(/^0/,'')}</b></td>
+        <td>${r.GB}</td>
+      </tr>`;
+    }).join('');
+
+    // W-L bar chart
+    renderWLBars(data);
+  });
+}
+
+function renderWLBars(data) {
+  const container = document.getElementById('wl-bars');
+  const maxG = Math.max(...data.map(r => r.G));
+  container.innerHTML = data.map(r => {
+    const wp = r.G > 0 ? r.W/r.G : 0;
+    const lp = r.G > 0 ? r.L/r.G : 0;
+    const tp = r.G > 0 ? r.T/r.G : 0;
+    const c = teamColor(r.team);
+    return `
+    <div class="mb-2">
+      <div class="d-flex justify-content-between mb-1">
+        <span style="font-size:.82rem;font-weight:700;color:${c}">${r.team}</span>
+        <span style="font-size:.78rem;color:#888">${r.W}W ${r.L}L${r.T?` ${r.T}T`:''}</span>
+      </div>
+      <div class="d-flex" style="height:18px;border-radius:4px;overflow:hidden;background:#eee">
+        <div style="width:${wp*100}%;background:${c};transition:width .5s"></div>
+        <div style="width:${tp*100}%;background:#aaa"></div>
+        <div style="width:${lp*100}%;background:#ddd"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// Batting
+// ─────────────────────────────────────────────
+function loadBatting() {
+  const params = new URLSearchParams({
+    team:      document.getElementById('bat-team').value,
+    opponent:  document.getElementById('bat-opp').value,
+    date_from: document.getElementById('bat-from').value,
+    date_to:   document.getElementById('bat-to').value,
+  });
+
+  fetch('/api/batting?' + params).then(r=>r.json()).then(data => {
+    const minPA = parseInt(document.getElementById('bat-min-pa').value) || 1;
+    const filtered = data.filter(r => r.PA >= minPA);
+
+    // Update summary
+    document.getElementById('sum-batters').textContent = filtered.length;
+    const totalHR = filtered.reduce((s,r)=>s+r.HR, 0);
+    document.getElementById('sum-hr').textContent = totalHR;
+
+    const tbody = document.querySelector('#batting-table tbody');
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td style="white-space:nowrap;font-weight:600">${r.HitterName}</td>
+        <td>${teamChip(r.TeamName)}</td>
+        <td>${r.G}</td><td>${r.PA}</td><td>${r.AB}</td>
+        <td><b>${r.H}</b></td>
+        <td>${r.D}</td><td>${r.T}</td>
+        <td style="color:${r.HR>10?'#c8102e':'inherit'};font-weight:${r.HR>10?'700':'400'}">${r.HR}</td>
+        <td>${r.RBI}</td><td>${r.R}</td>
+        <td>${r.BB}</td><td>${r.K}</td><td>${r.SB}</td>
+        <td><b>${fmtRate(r.AVG)}</b></td>
+        <td>${fmtRate(r.OBP)}</td>
+        <td>${fmtRate(r.SLG)}</td>
+        <td style="font-weight:700;color:${parseFloat(r.OPS)>=0.8?'#005BAC':'inherit'}">${fmtRate(r.OPS)}</td>
+      </tr>`).join('');
+
+    if (batDT) { batDT.destroy(); batDT = null; }
+    batDT = $('#batting-table').DataTable({
+      language: dtLang(),
+      order: [[3,'desc']],
+      pageLength: 25,
+      columnDefs: [
+        { targets: [2,3,4,5,6,7,8,9,10,11,12,13], type: 'num' },
+        { targets: [14,15,16,17], type: 'num' },
+      ],
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// Pitching
+// ─────────────────────────────────────────────
+function loadPitching() {
+  const params = new URLSearchParams({
+    team:      document.getElementById('pit-team').value,
+    opponent:  document.getElementById('pit-opp').value,
+    date_from: document.getElementById('pit-from').value,
+    date_to:   document.getElementById('pit-to').value,
+  });
+
+  fetch('/api/pitching?' + params).then(r=>r.json()).then(data => {
+    const minIP = parseFloat(document.getElementById('pit-min-ip').value) || 0;
+    const filtered = data.filter(r => parseFloat(r.IP) >= minIP);
+
+    document.getElementById('sum-pitchers').textContent = filtered.length;
+
+    const tbody = document.querySelector('#pitching-table tbody');
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td style="white-space:nowrap;font-weight:600">${r.PitcherName}</td>
+        <td>${teamChip(r.TeamName)}</td>
+        <td>${r.G}</td>
+        <td><b style="color:#005BAC">${r.W}</b></td>
+        <td>${r.L}</td>
+        <td>${r.S}</td><td>${r.HLD}</td>
+        <td><b>${r.IP}</b></td>
+        <td>${r.BF}</td><td>${r.H}</td><td>${r.HR}</td>
+        <td>${r.BB}</td><td>${r.K}</td>
+        <td>${r.R}</td><td>${r.ER}</td><td>${r.P}</td>
+        <td style="font-weight:700;color:${parseFloat(r.ERA)<3?'#007A3D':parseFloat(r.ERA)>5?'#c8102e':'inherit'}">${fmtEra(r.ERA)}</td>
+        <td>${fmtEra(r.WHIP)}</td>
+      </tr>`).join('');
+
+    if (pitDT) { pitDT.destroy(); pitDT = null; }
+    pitDT = $('#pitching-table').DataTable({
+      language: dtLang(),
+      order: [[7,'desc']],
+      pageLength: 25,
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// Games
+// ─────────────────────────────────────────────
+function loadGames() {
+  const params = new URLSearchParams({
+    team:      document.getElementById('gm-team').value,
+    opponent:  document.getElementById('gm-opp').value,
+    date_from: document.getElementById('gm-from').value,
+    date_to:   document.getElementById('gm-to').value,
+  });
+
+  fetch('/api/games?' + params).then(r=>r.json()).then(data => {
+    const tbody = document.querySelector('#games-table tbody');
+    tbody.innerHTML = data.map(r => {
+      const vWin = r.VisitingTotalScore > r.HomeTotalScore;
+      const hWin = r.HomeTotalScore > r.VisitingTotalScore;
+      const vCls = vWin ? 'score-win' : 'score-loss';
+      const hCls = hWin ? 'score-win' : 'score-loss';
+      return `<tr>
+        <td style="white-space:nowrap">${r.GameDateStr}</td>
+        <td>${teamChip(r.VisitingTeamName)}</td>
+        <td class="text-center score-cell">
+          <span class="${vCls}">${r.VisitingTotalScore}</span>
+          <span class="text-muted mx-1">:</span>
+          <span class="${hCls}">${r.HomeTotalScore}</span>
+        </td>
+        <td>${teamChip(r.HomeTeamName)}</td>
+        <td style="font-size:.82rem">${r.FieldAbbe||''}</td>
+        <td style="font-size:.82rem;white-space:nowrap">${r.Duration}</td>
+        <td style="font-size:.82rem;color:#005BAC">${r.WinningPitcherName||''}</td>
+        <td style="font-size:.82rem;color:#c8102e">${r.LosePitcherName||''}</td>
+        <td style="font-size:.82rem">${r.CloserPitcherName||''}</td>
+      </tr>`;
+    }).join('');
+
+    if (gmDT) { gmDT.destroy(); gmDT = null; }
+    gmDT = $('#games-table').DataTable({
+      language: dtLang(),
+      order: [[0,'desc']],
+      pageLength: 25,
+      columnDefs: [{ orderable: false, targets: [2] }],
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// DataTables language (Chinese)
+// ─────────────────────────────────────────────
+function dtLang() {
+  return {
+    search: '搜尋：',
+    lengthMenu: '顯示 _MENU_ 筆',
+    info: '顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆',
+    infoEmpty: '共 0 筆',
+    paginate: { first:'首頁', last:'末頁', next:'下頁', previous:'上頁' },
+    zeroRecords: '查無資料',
+  };
+}
+</script>
+</body>
+</html>
